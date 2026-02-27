@@ -1,446 +1,105 @@
-# 📱 ADB SMS Sender – Fresh Forensics
+# 📱 DroidSMS
 
-A Bash-based SMS automation tool that uses **ADB (Android Debug Bridge)** to compose and send SMS messages on Android devices.
+DroidSMS is a Bash-based SMS automation tool built on top of ADB (Android Debug Bridge).
 
-This tool supports:
+It demonstrates how to:
 
-* ✅ Automatic detection of the **Send button coordinates**
-* ✅ Manual coordinate entry (fallback mode)
-* ✅ Persistent configuration
-* ✅ Non-rooted devices
-* ✅ Physical devices and emulators
-* ✅ Simple forensic/lab automation workflows
+- Launch Android activities via intents
+- Prefill SMS data
+- Inspect UI hierarchy
+- Extract clickable element bounds
+- Inject tap events programmatically
+- Automate SMS sending without root
 
----
-
-# ⚠️ Important Notes
-
-* This tool does **not** bypass Android SMS security.
-* It uses the Android intent system to open the SMS composer.
-* It simulates a tap on the Send button using screen coordinates.
-* It requires the device to be unlocked.
-* Works best in controlled lab/forensic environments.
+This project is designed for educational, lab, and forensic environments.
 
 ---
 
-# 📦 Requirements
+## ⚙️ Features
 
-### 1️⃣ Install ADB
+- ✅ Automatic Send button detection (UI XML parsing)
+- ✅ Manual coordinate fallback mode
+- ✅ Persistent coordinate storage
+- ✅ Works on non-rooted devices
+- ✅ Compatible with physical devices and emulators
+- ✅ Transparent, reproducible automation flow
 
-Using APT:
+---
+
+## 🧠 How It Works (High-Level)
+
+DroidSMS does **not** bypass Android security.
+
+Instead, it follows this structured flow:
+
+```
+
+Intent → UI Render → XML Dump → Coordinate Extraction → Tap Injection
+
+````
+
+1. Launch SMS compose window using Android intent
+2. Dump the current UI hierarchy
+3. Locate the Send button
+4. Calculate its center coordinates
+5. Inject a tap event
+6. Optionally reset app state
+
+This mirrors how UI automation frameworks operate internally.
+
+---
+
+## 📦 Requirements
+
+### Install ADB
 
 ```bash
 sudo apt update && sudo apt install adb -y
-```
-
-Verify installation:
-
-```bash
 adb --version
-```
+````
 
----
+### Enable USB Debugging
 
-### 2️⃣ Enable USB Debugging on Device
+1. Settings → About Phone
+2. Tap Build Number 7 times
+3. Developer Options → Enable USB Debugging
 
-On the Android device:
-
-1. Go to **Settings → About Phone**
-2. Tap **Build Number** 7 times
-3. Go to **Developer Options**
-4. Enable **USB Debugging**
-
----
-
-### 3️⃣ Verify Device Connection
+### Verify Device
 
 ```bash
 adb devices
 ```
 
-You should see:
-
-```
-List of devices attached
-XXXXXXXX	device
-```
-
 ---
 
-# 🚀 How It Works
-
-The script performs the following steps:
-
-```
-1. Launch SMS compose window via Android Intent
-2. Wait for UI to load
-3. Tap Send button at stored screen coordinates
-4. Save coordinates for reuse
-```
-
-It supports **two coordinate modes**:
-
----
-
-# 🔎 Mode 1 – Auto Detect Send Button (Recommended)
-
-The tool uses:
-
-```bash
-adb shell uiautomator dump
-```
-
-It:
-
-* Dumps the current UI hierarchy
-* Pulls the XML locally
-* Searches for the Send button resource-id
-* Extracts its screen bounds
-* Calculates the center point
-* Saves X and Y coordinates
-
-This works when:
-
-* The messaging app exposes a consistent resource-id
-* The UI layout is stable
-
----
-
-# ✍️ Mode 2 – Manual Coordinate Entry
-
-If auto-detection fails (common on some OEM devices), you can:
-
-1. Open SMS compose screen manually
-2. Run:
-
-```bash
-adb shell getevent -l
-```
-
-OR use:
-
-```bash
-adb shell input tap X Y
-```
-
-3. Experiment to determine correct coordinates
-4. Enter them manually in the tool
-
-Coordinates are saved to:
-
-```
-.smsSender.conf
-```
-
-Example:
-
-```
-SEND_X=980
-SEND_Y=1820
-```
-
----
-
-# 🧪 Example Workflow
-
-### 1️⃣ Launch Tool
+## 🚀 Usage
 
 ```bash
 chmod +x smsSender.sh
 ./smsSender.sh
 ```
 
----
-
-### 2️⃣ Choose Option
-
-```
-1) Detect Send Button Coordinates (Auto)
-2) Enter Send Button Coordinates (Manual)
-3) Send SMS Message
-0) Exit
-```
+Follow the on-screen menu.
 
 ---
 
-### 3️⃣ Send SMS
+## 📚 Learn the Architecture
 
-* Enter phone number (with country code)
-* Enter message
-* Tool opens compose window
-* Tool taps Send button
-* SMS is sent
+Want to understand how this works at a system level?
 
----
+* 👉 [Manual ADB SMS Walkthrough](docs/manual-walkthrough.md)
+* 👉 [UI XML & Coordinate Analysis](docs/ui-analysis.md)
 
-# 🧠 Technical Breakdown
-
-## Intent Used
-
-```bash
-adb shell am start \
-  -a android.intent.action.SENDTO \
-  -d "sms:+1234567890" \
-  --es sms_body "Test message"
-```
-
-This:
-
-* Opens default SMS app
-* Prefills number
-* Prefills message body
-* Does NOT auto-send (Android restriction)
+The script is simply a structured wrapper around the manual workflow.
 
 ---
 
-## Why We Use Coordinate Tapping
-
-Android blocks silent SMS sending unless:
-
-* App is default SMS app
-* Device is rooted
-* System-level permissions exist
-
-Therefore, this tool:
-
-```
-Intent → UI Open → Tap Send → Done
-```
-
-This approach is:
-
-* Reliable
-* Reproducible
-* Forensically transparent
-* Compatible with modern Android versions
-
----
-
-
-# 🔬 Manual UI XML Analysis (Deep Dive Mode)
-
-This section explains how to manually extract the **Send button coordinates** directly from the Android UI hierarchy dump.
-
-This method is useful when:
-
-* Auto-detection fails
-* The messaging app uses a custom layout
-* You want to understand exactly how the coordinate extraction works
-* You are performing forensic validation
-
----
-
-# 🧩 Step 1 – Dump the Current UI Hierarchy
-
-Android provides a built-in UI inspection tool via:
-
-```bash
-adb shell uiautomator dump /sdcard/window_dump.xml
-adb pull /sdcard/window_dump.xml .
-```
-
-This generates a full XML representation of the current screen.
-
-Each UI element is represented as a `<node>` with attributes such as:
-
-* `text` → Visible label
-* `resource-id` → Internal identifier
-* `class` → UI component type
-* `bounds` → Screen rectangle occupied by the element
-
-Example node:
-
-```xml
-<node 
-    index="0"
-    text=""
-    resource-id="Compose:Draft:Send"
-    class="android.view.View"
-    bounds="[608,1404][706,1502]" />
-```
-
----
-
-# 🔎 Step 2 – Identify the SEND Button
-
-To find candidate elements:
-
-```bash
-cat window_dump.xml | grep -i resource-id
-```
-
-You are looking for something that clearly identifies the send button.
-
-In many messaging apps (including Google Messages), the Send button often contains a recognizable `resource-id`.
-
-Example:
-
-```
-resource-id="Compose:Draft:Send"
-```
-
-This string uniquely identifies the Send button within the UI tree.
-
----
-
-# 📦 Step 3 – Extract the Bounds
-
-We extract the element and isolate its `bounds` value:
-
-```bash
-grep -oP 'resource-id="Compose:Draft:Send"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' window_dump.xml
-```
-
-This returns:
-
-```
-resource-id="Compose:Draft:Send" bounds="[608,1404][706,1502]"
-```
-
-Now extract just the numeric coordinates:
-
-```bash
-grep -oP 'resource-id="Compose:Draft:Send"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' window_dump.xml \
-| sed -E 's/.*bounds="\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\]".*/\1 \2 \3 \4/'
-```
-
-Output:
-
-```
-608 1404 706 1502
-```
-
-These represent:
-
-```
-left  top   right  bottom
-```
-
----
-
-# 📐 Step 4 – Calculate the Center Point
-
-Android tap events work best when targeting the **center of the element**, not the corner.
-
-We calculate:
-
-```
-centerX = (left + right) / 2
-centerY = (top + bottom) / 2
-```
-
-Using `awk`:
-
-```bash
-... | awk '{x=($1+$3)/2; y=($2+$4)/2; print "Tap coordinates:", x, y}'
-```
-
-For our example:
-
-```
-Tap coordinates: 657 1453
-```
-
-Math breakdown:
-
-```
-(608 + 706) / 2 = 657
-(1404 + 1502) / 2 = 1453
-```
-
----
-
-# 👆 Step 5 – Trigger the Tap Event
-
-Now simulate a tap:
-
-```bash
-adb shell input tap 657 1453
-```
-
-This performs the equivalent of physically tapping the center of the Send button.
-
-If successful:
-
-* The message is sent
-* The compose window closes (depending on app behavior)
-
----
-
-# 🧠 Why This Works
-
-Android UI elements are rendered within a 2D coordinate system.
-
-`bounds` defines a rectangular region:
-
-```
-[left,top][right,bottom]
-```
-
-ADB's `input tap` command simply injects a touch event at specific X/Y screen coordinates.
-
-By computing the center of the UI element’s bounds, we:
-
-* Avoid edge-case misses
-* Avoid tapping outside the clickable region
-* Increase reliability across devices
-
----
-
-# 🧪 Forensic Validation Tip
-
-To verify visually:
-
-```bash
-adb shell screencap -p /sdcard/screen.png
-adb pull /sdcard/screen.png
-```
-
-Open the screenshot and confirm the coordinates align with the Send button.
-
-This ensures:
-
-* No UI overlays are blocking
-* Keyboard is not covering the button
-* Correct orientation is used
-
----
-
-# ⚠️ Common Failure Points
-
-### 1️⃣ Multiple Matching Nodes
-
-Some apps reuse similar `resource-id` values.
-
-Solution:
-
-* Add additional filtering (e.g., match class or index)
-* Manually inspect XML
-
----
-
-### 2️⃣ Keyboard Overlay
-
-If the soft keyboard is visible:
-
-* It may shift UI elements
-* It may block the Send button
-
-Consider hiding it before tapping:
-
-```bash
-adb shell input keyevent 111
-```
-
----
-
-### 3️⃣ Screen Rotation
-
-Landscape mode changes coordinate space.
-
-For consistent results:
-
-* Lock device to portrait mode
+## ⚠️ Important Notes
+
+* Device must be unlocked
+* Android does not allow silent SMS sending via ADB
+* This tool simulates UI interaction
+* Intended for controlled lab environments
 
 ---
 
@@ -465,4 +124,3 @@ If **DroidSMS** helped you better understand Android or ADB, consider supporting
 |  _|| | |  __/\__ \ | | | |  _| (_) | | |  __/ | | \__ \ | (__\__ \
 |_|  |_|  \___||___/_| |_| |_|  \___/|_|  \___|_| |_|___/_|\___|___/
         freshforensicsllc@tuta.com Fresh Forensics, LLC 2026 -->
-

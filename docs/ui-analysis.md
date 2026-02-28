@@ -64,15 +64,28 @@ centerY = (top + bottom) / 2
 Using awk:
 
 ```bash
-... | awk '{x=($1+$3)/2; y=($2+$4)/2; print x, y}'
+... | awk '{x=($1+$3)/2; y=($2+$4)/2; print "Tap coordinates:", x, y}'
 ```
 
 ---
+
+# Putting It All Together
+
+All of the previous commands can be combined to form the following bash one-liner
+
+```bash
+grep -oP 'resource-id="Compose:Draft:Send"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' window_dump.xml | sed -E 's/.*bounds="\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\]".*/\1 \2 \3 \4/' | awk '{x=($1+$3)/2; y=($2+$4)/2; print "Tap coordinates:", x, y}'
+```
 
 # Step 5 — Inject Tap
 
 ```bash
 adb shell input tap centerX centerY
+```
+For example, on one phone that I tested, that resulted in this command:
+
+```bash
+adb shell input tap 657 1453
 ```
 
 This simulates a physical touch at the center of the button.
@@ -93,10 +106,12 @@ Tapping the center:
 
 # Common Failure Points
 
+* Field is not Focused
 * Keyboard overlays shifting UI
 * Landscape orientation
 * Multiple matching resource IDs
 * OEM-specific layout differences
+* May not work for other languages
 
 DroidSMS dynamically performs this process to remain resolution-independent and reproducible.
 

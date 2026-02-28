@@ -89,6 +89,7 @@ Want to understand how this works at a system level?
 
 * 👉 [Manual ADB SMS Walkthrough](docs/manual-walkthrough.md)
 * 👉 [UI XML & Coordinate Analysis](docs/ui-analysis.md)
+* 👉 [ADB Input & Keyevent Cheatsheet](docs/keyevent-cheatsheet.md)
 
 The script is simply a structured wrapper around the manual workflow.
 
